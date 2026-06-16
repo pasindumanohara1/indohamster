@@ -771,6 +771,10 @@ a:hover { color: var(--accent); }
   background: rgba(40,40,40,0.9);
 }
 
+.related-sentinel {
+  height: 1px;
+}
+
 /* Sponsored card */
 .video-card.sponsored .sponsored-badge {
   position: absolute;

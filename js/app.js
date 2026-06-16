@@ -495,8 +495,12 @@ async function renderDetail(id) {
 
   // Related: use first keyword or 'all'
   const relatedQ = keywords[0] || 'all';
-  const related = await searchVideos(relatedQ, 1, 'top-weekly', 'medium', '0', '0');
-  const relatedVids = related?.videos?.slice(0, 12) || [];
+  let relatedPage = 1;
+  const related = await searchVideos(relatedQ, relatedPage, 'top-weekly', 'medium', '0', '0');
+  const relatedVids = related?.videos || [];
+  const relatedTotalPages = related?.total_pages || 1;
+  const RELATED_PER_PAGE = related?.per_page || 30;
+  const relatedTotalPages = related?.total_pages || 1;
 
   let html = '<div class="video-detail"><div class="main-content">';
   html += `<div class="player-wrap ad-player">`;
@@ -542,9 +546,16 @@ async function renderDetail(id) {
   html += '<div class="sidebar">';
   html += '<h3>Related Videos</h3>';
   if (relatedVids.length) {
-    html += '<div class="video-grid" style="grid-template-columns:1fr">';
-    html += relatedVids.map(rv => renderCard(rv)).join('');
+    html += '<div class="video-grid related-grid" id="relatedGrid" style="grid-template-columns:1fr">';
+    html += relatedVids.map((rv, i) => {
+      if (i > 0 && i % 8 === 0) {
+        const rv2 = relatedVids[Math.floor(Math.random() * relatedVids.length)];
+        return renderCard(rv) + renderCard(rv2, true);
+      }
+      return renderCard(rv);
+    }).join('');
     html += '</div>';
+    html += '<div class="related-sentinel" id="relatedSentinel"></div>';
   } else {
     html += '<p class="empty-state">No related videos found</p>';
   }
@@ -552,6 +563,30 @@ async function renderDetail(id) {
 
   app.innerHTML = html;
   attachCardClicks('.sidebar');
+
+  // Infinite scroll for related videos
+  const sentinel = document.getElementById('relatedSentinel');
+  if (sentinel) {
+    const relatedObs = new IntersectionObserver(async (entries) => {
+      const entry = entries[0];
+      if (!entry.isIntersecting) return;
+      if (relatedPage >= relatedTotalPages) { relatedObs.unobserve(sentinel); return; }
+      relatedPage++;
+      const more = await searchVideos(relatedQ, relatedPage, 'top-weekly', 'medium', '0', '0');
+      if (!more?.videos?.length) { relatedObs.unobserve(sentinel); return; }
+      const grid = document.getElementById('relatedGrid');
+      grid.insertAdjacentHTML('beforeend', more.videos.map((rv, i) => {
+        if (i > 0 && i % 8 === 0) {
+          const rv2 = more.videos[Math.floor(Math.random() * more.videos.length)];
+          return renderCard(rv) + renderCard(rv2, true);
+        }
+        return renderCard(rv);
+      }).join(''));
+      attachCardClicks('#relatedGrid');
+      if (relatedPage >= relatedTotalPages) relatedObs.unobserve(sentinel);
+    }, { rootMargin: '200px' });
+    relatedObs.observe(sentinel);
+  }
 
   // Jump to top
   window.scrollTo(0, 0);
