@@ -1,3 +1,5 @@
+import '../css/style.css';
+
 const API_BASE = 'https://www.eporner.com/api/v2/video';
 const PER_PAGE = 30;
 const AD_LINK = 'https://omg10.com/4/9060184';
@@ -8,9 +10,9 @@ const CATEGORIES = [
   'redhead', 'blonde', 'shemale', 'hentai', 'vr-porn', 'homemade', 'cartoon',
   'gangbang', 'creampie', 'public', 'casting', 'british', 'indian', 'babe',
   'massage', 'fetish', 'squirt', 'double-penetration', 'interracial',
-];
+] as const;
 
-const ORDERS = [
+const ORDERS: { value: string; label: string }[] = [
   { value: 'latest', label: 'Latest' },
   { value: 'most-popular', label: 'Most Popular' },
   { value: 'top-weekly', label: 'Trending' },
@@ -20,7 +22,26 @@ const ORDERS = [
   { value: 'shortest', label: 'Shortest' },
 ];
 
-const state = {
+interface HistoryEntry {
+  id: string;
+  title: string;
+  time: number;
+}
+
+interface AppState {
+  query: string;
+  page: number;
+  order: string;
+  thumbsize: string;
+  gay: string;
+  lq: string;
+  totalPages: number;
+  totalCount: number;
+  panic: boolean;
+  history: HistoryEntry[];
+}
+
+const state: AppState = {
   query: 'all',
   page: 1,
   order: 'latest',
@@ -33,25 +54,69 @@ const state = {
   history: JSON.parse(localStorage.getItem('ih_history') || '[]'),
 };
 
-const app = document.getElementById('app');
-const searchForm = document.getElementById('searchForm');
-const orderSelect = document.getElementById('orderSelect');
-const thumbsizeSelect = document.getElementById('thumbsizeSelect');
-const panicOverlay = document.getElementById('panicOverlay');
+interface ThumbInfo {
+  src: string;
+  width: number;
+  height: number;
+  size: number;
+}
 
-function adRedirect() {
+interface VideoItem {
+  id: string;
+  title: string;
+  views: number;
+  rate: string;
+  added: string;
+  length_sec: number;
+  length_min: string;
+  default_thumb: ThumbInfo | null;
+  thumbs: ThumbInfo[];
+  embed: string;
+  keywords: string;
+  url: string;
+}
+
+interface SearchResponse {
+  videos: VideoItem[];
+  total_count: number;
+  total_pages: number;
+  page: number;
+}
+
+interface VideoByIdResponse {
+  id: string;
+  title: string;
+  views: number;
+  rate: string;
+  added: string;
+  length_sec: number;
+  length_min: string;
+  default_thumb: ThumbInfo | null;
+  thumbs: ThumbInfo[];
+  embed: string;
+  keywords: string;
+  url: string;
+}
+
+const app = document.getElementById('app') as HTMLDivElement;
+const searchForm = document.getElementById('searchForm') as HTMLFormElement;
+const orderSelect = document.getElementById('orderSelect') as HTMLSelectElement;
+const thumbsizeSelect = document.getElementById('thumbsizeSelect') as HTMLSelectElement;
+const panicOverlay = document.getElementById('panicOverlay') as HTMLDivElement;
+
+function adRedirect(): false {
   window.open(AD_LINK, '_blank');
   return false;
 }
 
-function adPopup() {
+function adPopup(): void {
   try {
     const w = window.open(AD_LINK, '_blank', 'width=800,height=600');
     if (!w) window.location.href = AD_LINK;
   } catch {}
 }
 
-function skeletonGrid() {
+function skeletonGrid(): string {
   const n = 12;
   let html = '<div class="skeleton-grid">';
   for (let i = 0; i < n; i++) {
@@ -67,56 +132,62 @@ function skeletonGrid() {
   return html;
 }
 
-function showLoading() {
+function showLoading(): void {
   app.innerHTML = '<div class="main"><div class="section-header"><h2>Loading...</h2></div>' + skeletonGrid() + '</div>';
 }
 
-function esc(str) {
+function esc(str: string): string {
   const d = document.createElement('div');
   d.textContent = str;
   return d.innerHTML;
 }
 
-function fmtNum(n) {
+function fmtNum(n: number): string {
   return n >= 1e6 ? (n / 1e6).toFixed(1) + 'M'
     : n >= 1e3 ? (n / 1e3).toFixed(1) + 'K'
-    : n;
+    : String(n);
 }
 
-function fmtDur(sec) {
+function fmtDur(sec: number): string {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-function dateAgo(s) {
+function dateAgo(s: string): string {
   const d = new Date(s.replace(' ', 'T'));
-  const diff = Math.floor((Date.now() - d) / 1000);
+  const diff = Math.floor((Date.now() - d.getTime()) / 1000);
   if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
   if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
   if (diff < 2592000) return Math.floor(diff / 86400) + 'd ago';
   return d.toLocaleDateString();
 }
 
-function addHistory(id, title) {
+function addHistory(id: string, title: string): void {
   state.history = state.history.filter(h => h.id !== id);
   state.history.unshift({ id, title, time: Date.now() });
   if (state.history.length > 50) state.history = state.history.slice(0, 50);
   localStorage.setItem('ih_history', JSON.stringify(state.history));
 }
 
-async function api(endpoint, params) {
-  const qs = new URLSearchParams({ ...params, format: 'json' }).toString();
+async function api<T>(endpoint: string, params: Record<string, string | number>): Promise<T | null> {
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    qs.set(k, String(v));
+  }
+  qs.set('format', 'json');
   const url = `${API_BASE}/${endpoint}/?${qs}`;
   try {
     const r = await fetch(url);
     if (!r.ok) return null;
-    return await r.json();
+    return await r.json() as T;
   } catch { return null; }
 }
 
-async function searchVideos(q, page, order, thumbsize, gay, lq) {
-  return api('search', {
+async function searchVideos(
+  q: string, page: number, order: string, thumbsize: string, gay: string, lq: string
+): Promise<SearchResponse | null> {
+  return api<SearchResponse>('search', {
     query: q || 'all',
     page: page || 1,
     per_page: PER_PAGE,
@@ -127,12 +198,11 @@ async function searchVideos(q, page, order, thumbsize, gay, lq) {
   });
 }
 
-async function getVideo(id, thumbsize) {
-  return api('id', { id, thumbsize: thumbsize || 'big' });
+async function getVideo(id: string, thumbsize: string): Promise<VideoByIdResponse | null> {
+  return api<VideoByIdResponse>('id', { id, thumbsize: thumbsize || 'big' });
 }
 
-// SEO Meta Updater
-function updateSEO(opts = {}) {
+function updateSEO(opts: { title?: string; description?: string; url?: string; image?: string } = {}): void {
   const baseTitle = 'IndoHamster';
   const baseDesc = 'Watch free HD porn videos in 4K. Huge collection of xxx adult entertainment, amateur, anal, teen, MILF and more. Daily updates, fast streaming.';
   const baseUrl = 'https://indohamster.com/';
@@ -154,7 +224,7 @@ function updateSEO(opts = {}) {
   setMeta('twitter:image', img);
 }
 
-function setMeta(name, content) {
+function setMeta(name: string, content: string): void {
   let el = document.querySelector(`meta[name="${name}"], meta[property="${name}"]`);
   if (!el) {
     el = document.createElement('meta');
@@ -168,15 +238,14 @@ function setMeta(name, content) {
   el.setAttribute('content', content);
 }
 
-// Router
-function router() {
+function router(): void {
   const hash = location.hash.slice(1) || '/';
 
   if (hash === '/') { renderHome(); return; }
   if (hash.startsWith('/search')) {
     const p = new URLSearchParams(hash.split('?')[1] || '');
     state.query = p.get('q') || 'all';
-    state.page = parseInt(p.get('page')) || 1;
+    state.page = parseInt(p.get('page') || '1') || 1;
     state.order = p.get('order') || orderSelect.value;
     state.thumbsize = p.get('thumbsize') || thumbsizeSelect.value;
     state.gay = p.get('gay') || '0';
@@ -196,17 +265,16 @@ function router() {
 
 window.addEventListener('hashchange', router);
 
-// Home
-function renderHome() {
+function renderHome(): void {
   state.query = 'all';
   state.page = 1;
   showLoading();
   loadGrid();
 }
 
-function renderTabsHtml(active) {
+function renderTabsHtml(active: string): string {
   const tabs = ['latest', 'most-popular', 'top-weekly', 'top-monthly', 'top-rated'];
-  const labels = { latest: 'Latest', 'most-popular': 'Most Popular', 'top-weekly': 'Trending', 'top-monthly': 'Top Monthly', 'top-rated': 'Top Rated' };
+  const labels: Record<string, string> = { latest: 'Latest', 'most-popular': 'Most Popular', 'top-weekly': 'Trending', 'top-monthly': 'Top Monthly', 'top-rated': 'Top Rated' };
   let html = '<div class="tabs">';
   tabs.forEach(t => {
     html += `<button class="tab-btn${t === active ? ' active' : ''}" data-tab="${t}">${labels[t] || t}</button>`;
@@ -215,7 +283,7 @@ function renderTabsHtml(active) {
   return html;
 }
 
-function renderCatsHtml(active) {
+function renderCatsHtml(active: string): string {
   let html = '<div class="categories">';
   CATEGORIES.forEach(c => {
     const label = c === 'all' ? 'All' : c.replace(/-/g, ' ');
@@ -225,10 +293,10 @@ function renderCatsHtml(active) {
   return html;
 }
 
-function attachClickHandlers() {
+function attachClickHandlers(): void {
   app.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      state.order = btn.dataset.tab;
+      state.order = (btn as HTMLButtonElement).dataset.tab!;
       state.page = 1;
       const p = new URLSearchParams({ q: state.query, order: state.order, thumbsize: state.thumbsize, gay: state.gay, lq: state.lq });
       location.hash = `#/search?${p}`;
@@ -237,7 +305,7 @@ function attachClickHandlers() {
 
   app.querySelectorAll('.category-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      state.query = btn.dataset.cat;
+      state.query = (btn as HTMLButtonElement).dataset.cat!;
       state.page = 1;
       const p = new URLSearchParams({ q: state.query, order: state.order, thumbsize: state.thumbsize, gay: state.gay, lq: state.lq });
       location.hash = `#/search?${p}`;
@@ -245,7 +313,7 @@ function attachClickHandlers() {
   });
 }
 
-async function loadGrid() {
+async function loadGrid(): Promise<void> {
   const data = await searchVideos(state.query, state.page, state.order, state.thumbsize, state.gay, state.lq);
   if (!data || !data.videos) {
     app.innerHTML = '<div class="error-msg"><h3>Failed to load videos</h3><p>Try again later.</p></div>';
@@ -285,13 +353,12 @@ async function loadGrid() {
   attachCardClicks('#' + gridId);
   attachPagination();
 
-  // Lazy load hover GIFs
   document.querySelectorAll('.video-card').forEach(card => {
-    const hover = card.querySelector('.hover-gif');
-    if (hover) {
+    const hover = card.querySelector('.hover-gif') as HTMLImageElement | null;
+    if (hover && hover.dataset.src) {
       const obs = new IntersectionObserver((entries) => {
         entries.forEach(e => {
-          if (e.isIntersecting) { hover.src = hover.dataset.src; obs.unobserve(hover); }
+          if (e.isIntersecting) { hover.src = hover.dataset.src!; obs.unobserve(hover); }
         });
       });
       obs.observe(hover);
@@ -299,7 +366,7 @@ async function loadGrid() {
   });
 }
 
-function renderCard(v, isSponsored) {
+function renderCard(v: VideoItem | null, isSponsored?: boolean): string {
   if (isSponsored) {
     return `
       <div class="video-card sponsored" onclick="adRedirect()">
@@ -318,6 +385,8 @@ function renderCard(v, isSponsored) {
       </div>
     `;
   }
+
+  if (!v) return '';
 
   const thumb = v.default_thumb?.src ? esc(v.default_thumb.src) : '';
   const hoverSrc = v.thumbs?.[3]?.src || v.thumbs?.[0]?.src || thumb;
@@ -346,17 +415,18 @@ function renderCard(v, isSponsored) {
   `;
 }
 
-function attachCardClicks(containerSelector) {
+function attachCardClicks(containerSelector: string): void {
   const container = document.querySelector(containerSelector);
   if (!container) return;
   container.querySelectorAll('.video-card').forEach(card => {
     card.addEventListener('click', () => {
-      location.hash = `#/video/${card.dataset.id}`;
+      const id = (card as HTMLElement).dataset.id;
+      if (id) location.hash = `#/video/${id}`;
     });
   });
 }
 
-function renderPagination() {
+function renderPagination(): string {
   const p = state.page;
   const t = state.totalPages;
   const maxPage = Math.min(t, 1000);
@@ -371,10 +441,10 @@ function renderPagination() {
   `;
 }
 
-function attachPagination() {
-  const go = (n) => {
+function attachPagination(): void {
+  const go = (n: number) => {
     state.page = n;
-    const p = new URLSearchParams({ q: state.query, page: state.page, order: state.order, thumbsize: state.thumbsize, gay: state.gay, lq: state.lq });
+    const p = new URLSearchParams({ q: state.query, page: String(state.page), order: state.order, thumbsize: state.thumbsize, gay: state.gay, lq: state.lq });
     location.hash = `#/search?${p}`;
   };
 
@@ -384,8 +454,7 @@ function attachPagination() {
   app.querySelector('.last-btn')?.addEventListener('click', () => go(Math.min(state.totalPages, 1000)));
 }
 
-// Video Detail
-function showDetailSkeleton() {
+function showDetailSkeleton(): void {
   app.innerHTML = `<div class="video-detail">
     <div class="main-content">
       <div class="skeleton-card" style="aspect-ratio:16/9;border-radius:var(--radius);margin-bottom:20px">
@@ -407,7 +476,7 @@ function showDetailSkeleton() {
   </div>`;
 }
 
-async function renderDetail(id) {
+async function renderDetail(id: string): Promise<void> {
   showDetailSkeleton();
   const data = await getVideo(id, 'big');
   if (!data || !data.id) {
@@ -434,7 +503,6 @@ async function renderDetail(id) {
   const kwRaw = v.keywords || '';
   const keywords = kwRaw.split(',').map(k => esc(k.trim())).filter(Boolean);
 
-  // Related: use first keyword or 'all'
   const relatedQ = keywords[0] || 'all';
   const related = await searchVideos(relatedQ, 1, 'top-weekly', 'medium', '0', '0');
   const relatedVids = related?.videos?.slice(0, 12) || [];
@@ -461,7 +529,6 @@ async function renderDetail(id) {
 
   if (keywords.length) {
     html += '<div class="keywords">';
-    // Direct keyword search links
     html += keywords.map(k =>
       `<a href="#/search?q=${encodeURIComponent(k.replace(/&amp;/g, '&'))}">${k}</a>`
     ).join('');
@@ -484,21 +551,19 @@ async function renderDetail(id) {
   app.innerHTML = html;
   attachCardClicks('.sidebar');
 
-  // Jump to top
   window.scrollTo(0, 0);
 }
 
-// Search form
 searchForm.addEventListener('submit', (e) => {
   e.preventDefault();
-  const q = searchForm.q.value.trim();
+  const input = searchForm.q as HTMLInputElement;
+  const q = input.value.trim();
   state.query = q || 'all';
   state.page = 1;
   const p = new URLSearchParams({ q: state.query, order: orderSelect.value, thumbsize: thumbsizeSelect.value, gay: state.gay, lq: state.lq });
   location.hash = `#/search?${p}`;
 });
 
-// Filters
 orderSelect.addEventListener('change', () => {
   state.order = orderSelect.value;
   state.page = 1;
@@ -511,9 +576,8 @@ thumbsizeSelect.addEventListener('change', () => {
   router();
 });
 
-// Build quality/gay filter UI
-function buildFiltersUI() {
-  const header = document.querySelector('.header');
+function buildFiltersUI(): void {
+  const header = document.querySelector('.header') as HTMLElement;
   const extraFilters = document.createElement('div');
   extraFilters.className = 'header-filters extra-filters';
   extraFilters.style.cssText = 'margin-left:auto';
@@ -537,7 +601,7 @@ function buildFiltersUI() {
   lqSelect.addEventListener('change', () => {
     state.lq = lqSelect.value;
     state.page = 1;
-    const p = new URLSearchParams({ q: state.query, order: orderSelect.value, thumbsize: thumbsizeSelect.value, gay: state.gay, lq: state.lq });
+    const p = new URLSearchParams({ q: state.query, order: state.order, thumbsize: thumbsizeSelect.value, gay: state.gay, lq: state.lq });
     location.hash = `#/search?${p}`;
   });
   extraFilters.appendChild(lqSelect);
@@ -562,8 +626,6 @@ function buildFiltersUI() {
   header.appendChild(extraFilters);
 }
 
-// Panic mode
-// Popunder on first click after video page load
 document.addEventListener('click', function popOnce() {
   if (location.hash.startsWith('#/video/')) {
     adPopup();
@@ -571,9 +633,8 @@ document.addEventListener('click', function popOnce() {
   document.removeEventListener('click', popOnce);
 }, { once: true });
 
-// Also popunder on every 3rd page visit
-let visitCount = parseInt(sessionStorage.getItem('ih_visits') || '0') + 1;
-sessionStorage.setItem('ih_visits', visitCount);
+let visitCount = parseInt(sessionStorage.getItem('ih_visits') || '0', 10) + 1;
+sessionStorage.setItem('ih_visits', String(visitCount));
 if (visitCount % 3 === 0) {
   setTimeout(adPopup, 2000);
 }
@@ -587,9 +648,9 @@ document.addEventListener('keydown', (e) => {
   if (state.panic) return;
   if (document.activeElement?.tagName !== 'INPUT') {
     if (e.key === 'f' || e.key === 'F') {
-      const iframe = document.querySelector('.player-wrap iframe');
+      const iframe = document.querySelector('.player-wrap iframe') as HTMLIFrameElement | null;
       if (iframe) {
-        try { iframe.contentWindow.postMessage('{"event":"command","func":"toggleFullscreen","args":""}', '*'); } catch {}
+        try { iframe.contentWindow?.postMessage('{"event":"command","func":"toggleFullscreen","args":""}', '*'); } catch {}
       }
     }
   }
@@ -600,6 +661,5 @@ panicOverlay.addEventListener('click', () => {
   panicOverlay.classList.remove('show');
 });
 
-// Init
 buildFiltersUI();
 router();

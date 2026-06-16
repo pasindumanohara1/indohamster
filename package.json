@@ -1,11 +1,18 @@
 {
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
     "bmad-method": "^6.8.0",
     "cors": "^2.8.6",
     "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.3",
+    "typescript": "^6.0.3",
+    "vite": "^6.4.3"
   }
 }
