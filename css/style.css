@@ -682,6 +682,61 @@ a:hover { color: var(--accent); }
   box-shadow: 0 6px 32px rgba(229,9,20,0.6);
 }
 
+/* Mid-roll ad overlay */
+.midroll-ad {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  display: none;
+  background: rgba(0,0,0,0.85);
+}
+
+.midroll-ad.visible {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.midroll-content {
+  text-align: center;
+  cursor: pointer;
+  padding: 40px;
+}
+
+.midroll-label {
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: #aaa;
+  margin-bottom: 12px;
+}
+
+.midroll-timer {
+  font-size: 16px;
+  color: #fff;
+  margin-bottom: 16px;
+}
+
+.midroll-skip {
+  display: none;
+  background: #e50914;
+  color: #fff;
+  border: none;
+  padding: 10px 28px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.midroll-skip:hover {
+  background: #ff0f1f;
+}
+
 /* Sponsored card */
 .video-card.sponsored .sponsored-badge {
   position: absolute;
@@ -694,6 +749,35 @@ a:hover { color: var(--accent); }
   font-size: 10px;
   font-weight: 700;
   z-index: 2;
+}
+
+.sponsored-blur {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(4px) brightness(0.6);
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.sponsored-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.25);
+  z-index: 1;
+}
+
+.sponsored-fallback {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #1a237e, #4a148c);
+  position: absolute;
+  top: 0;
+  left: 0;
 }
 
 /* Random btn */

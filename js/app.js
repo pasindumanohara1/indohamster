@@ -168,8 +168,60 @@ function setMeta(name, content) {
   el.setAttribute('content', content);
 }
 
+// Mid-roll ad timer
+let midrollTimer = null;
+let midrollCountdown = null;
+
+function startMidrollTimer() {
+  clearTimeout(midrollTimer);
+  clearInterval(midrollCountdown);
+  midrollTimer = setTimeout(showMidrollAd, 180000);
+}
+
+function showMidrollAd() {
+  const ad = document.getElementById('midrollAd');
+  if (!ad) return;
+  ad.classList.add('visible');
+  let count = 5;
+  const timerEl = document.getElementById('midrollTimer');
+  const skipEl = document.getElementById('midrollSkipBtn');
+  if (timerEl) timerEl.textContent = `Skip in ${count}s`;
+  if (skipEl) skipEl.style.display = 'none';
+  midrollCountdown = setInterval(() => {
+    count--;
+    if (count > 0) {
+      if (timerEl) timerEl.textContent = `Skip in ${count}s`;
+    } else {
+      clearInterval(midrollCountdown);
+      if (timerEl) timerEl.style.display = 'none';
+      if (skipEl) skipEl.style.display = 'block';
+    }
+  }, 1000);
+}
+
+function hideMidrollAd() {
+  const ad = document.getElementById('midrollAd');
+  if (!ad) return;
+  ad.classList.remove('visible');
+  const timerEl = document.getElementById('midrollTimer');
+  const skipEl = document.getElementById('midrollSkipBtn');
+  if (timerEl) { timerEl.style.display = 'block'; timerEl.textContent = 'Skip in 5s'; }
+  if (skipEl) skipEl.style.display = 'none';
+  clearInterval(midrollCountdown);
+  startMidrollTimer();
+}
+
+function clearMidrollTimers() {
+  clearTimeout(midrollTimer);
+  clearInterval(midrollCountdown);
+  midrollTimer = null;
+  midrollCountdown = null;
+}
+
 // Router
 function router() {
+  clearMidrollTimers();
+
   const hash = location.hash.slice(1) || '/';
 
   if (hash === '/') { renderHome(); return; }
@@ -273,7 +325,10 @@ async function loadGrid() {
   const gridId = 'videoGrid_' + Date.now();
   html += `<div class="video-grid" id="${gridId}">`;
   html += data.videos.map((v, i) => {
-    if (i > 0 && i % 8 === 0) return renderCard(v) + renderCard(null, true);
+    if (i > 0 && i % 8 === 0) {
+      const rv = data.videos[Math.floor(Math.random() * data.videos.length)];
+      return renderCard(v) + renderCard(rv, true);
+    }
     return renderCard(v);
   }).join('');
   html += '</div>';
@@ -300,11 +355,13 @@ async function loadGrid() {
 }
 
 function renderCard(v, isSponsored) {
-  if (isSponsored) {
+  if (isSponsored && v) {
+    const st = v.default_thumb?.src ? esc(v.default_thumb.src) : '';
     return `
       <div class="video-card sponsored" onclick="adRedirect()">
         <div class="thumb-wrap">
-          <div style="width:100%;height:100%;background:linear-gradient(135deg,#1a237e,#4a148c);display:flex;justify-content:center;align-items:center;font-size:40px;">🔞</div>
+          ${st ? `<img src="${st}" alt="" loading="lazy" class="sponsored-blur" />` : `<div class="sponsored-fallback"></div>`}
+          <div class="sponsored-overlay"></div>
           <span class="duration">VIP</span>
           <span class="sponsored-badge">AD</span>
         </div>
@@ -442,7 +499,14 @@ async function renderDetail(id) {
   let html = '<div class="video-detail"><div class="main-content">';
   html += `<div class="player-wrap ad-player">`;
   html += `<iframe src="${embedSrc}" allowfullscreen loading="lazy"></iframe>`;
-  html += `<div class="player-ad-overlay" onclick="this.classList.add('clicked'); adRedirect();"><span>▶ Play</span></div>`;
+  html += `<div class="player-ad-overlay" onclick="this.classList.add('clicked'); adRedirect(); startMidrollTimer();"><span>▶ Play</span></div>`;
+  html += `<div class="midroll-ad" id="midrollAd">`;
+  html += `  <div class="midroll-content" onclick="adRedirect()">`;
+  html += `    <div class="midroll-label">Ad</div>`;
+  html += `    <div class="midroll-timer" id="midrollTimer">Skip in 5s</div>`;
+  html += `    <button class="midroll-skip" id="midrollSkipBtn" onclick="event.stopPropagation(); hideMidrollAd();">Skip ▶</button>`;
+  html += `  </div>`;
+  html += `</div>`;
   html += `</div>`;
   html += '<div class="video-info">';
   html += `<h1>${title}</h1>`;
