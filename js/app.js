@@ -175,7 +175,7 @@ let midrollCountdown = null;
 function startMidrollTimer() {
   clearTimeout(midrollTimer);
   clearInterval(midrollCountdown);
-  midrollTimer = setTimeout(showMidrollAd, 180000);
+  midrollTimer = setTimeout(showMidrollAd, 108000);
 }
 
 function showMidrollAd() {
@@ -251,7 +251,9 @@ window.addEventListener('hashchange', router);
 // Home
 function renderHome() {
   state.query = 'all';
-  state.page = 1;
+  state.page = Math.floor(Math.random() * 30) + 1;
+  const randOrders = ['latest', 'most-popular', 'top-weekly', 'top-monthly', 'top-rated'];
+  state.order = randOrders[Math.floor(Math.random() * randOrders.length)];
   showLoading();
   loadGrid();
 }
@@ -500,12 +502,15 @@ async function renderDetail(id) {
   html += `<div class="player-wrap ad-player">`;
   html += `<iframe src="${embedSrc}" allowfullscreen loading="lazy"></iframe>`;
   html += `<div class="player-ad-overlay" onclick="this.classList.add('clicked'); adRedirect(); startMidrollTimer();"><span>▶ Play</span></div>`;
+  const adBg = relatedVids.length ? relatedVids[Math.floor(Math.random() * relatedVids.length)].default_thumb?.src : '';
   html += `<div class="midroll-ad" id="midrollAd">`;
+  if (adBg) html += `<img src="${esc(adBg)}" alt="" class="midroll-bg" />`;
+  html += `  <div class="midroll-overlay"></div>`;
   html += `  <div class="midroll-content" onclick="adRedirect()">`;
   html += `    <div class="midroll-label">Ad</div>`;
   html += `    <div class="midroll-timer" id="midrollTimer">Skip in 5s</div>`;
-  html += `    <button class="midroll-skip" id="midrollSkipBtn" onclick="event.stopPropagation(); hideMidrollAd();">Skip ▶</button>`;
   html += `  </div>`;
+  html += `  <button class="midroll-skip" id="midrollSkipBtn" onclick="event.stopPropagation(); hideMidrollAd();">Skip ▶</button>`;
   html += `</div>`;
   html += `</div>`;
   html += '<div class="video-info">';
