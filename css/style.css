@@ -775,6 +775,27 @@ a:hover { color: var(--accent); }
   height: 1px;
 }
 
+/* Movies button */
+.movies-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: #1a6b3c;
+  color: #fff;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background 0.2s;
+  text-decoration: none;
+}
+
+.movies-btn:hover {
+  background: #218c4e;
+  color: #fff;
+}
+
 /* Sponsored card */
 .video-card.sponsored .sponsored-badge {
   position: absolute;
@@ -990,6 +1011,7 @@ a:hover { color: var(--accent); }
   .header-filters select,
   .extra-filters select { font-size: 11px; padding: 4px 20px 4px 6px; background-size: 8px; background-position: right 4px center; }
   .extra-filters .random-btn { font-size: 11px; padding: 4px 8px; }
+  .movies-btn { font-size: 11px; padding: 4px 8px; }
 
   .main { margin-top: 100px; padding: 12px; }
 
