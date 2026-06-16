@@ -527,7 +527,7 @@ async function renderDetail(id) {
   html += `<div class="ad-action-bar">
     <button class="ad-btn download-btn" onclick="adRedirect()">⬇ Download HD</button>
     <button class="ad-btn next-btn" onclick="adRedirect()">⏭ Next Video</button>
-    <button class="ad-btn hd-btn" onclick="adRedirect()">⚙ 4K Quality</button>
+    <button class="ad-btn hd-btn" onclick="window.open('https://www.sfliix.duckdns.org/','_blank')">🎬 Movies</button>
   </div>`;
 
   if (keywords.length) {
