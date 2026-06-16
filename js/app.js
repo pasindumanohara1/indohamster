@@ -499,8 +499,6 @@ async function renderDetail(id) {
   const related = await searchVideos(relatedQ, relatedPage, 'top-weekly', 'medium', '0', '0');
   const relatedVids = related?.videos || [];
   const relatedTotalPages = related?.total_pages || 1;
-  const RELATED_PER_PAGE = related?.per_page || 30;
-  const relatedTotalPages = related?.total_pages || 1;
 
   let html = '<div class="video-detail"><div class="main-content">';
   html += `<div class="player-wrap ad-player">`;
