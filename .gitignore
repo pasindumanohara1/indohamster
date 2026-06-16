@@ -1,0 +1,11 @@
+node_modules/
+_bmad/
+_bmad-output/
+docs/
+.idx/
+.agents/
+.opencode/
+.git/
+*.log
+.DS_Store
+npm-debug.log*
