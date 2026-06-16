@@ -1,5 +1,5 @@
 const API_BASE = 'https://www.eporner.com/api/v2/video';
-const PER_PAGE = 30;
+const PER_PAGE = window.innerWidth < 768 ? 15 : 30;
 const AD_LINK = 'https://omg10.com/4/9060184';
 
 const CATEGORIES = [
@@ -24,7 +24,7 @@ const state = {
   query: 'all',
   page: 1,
   order: 'latest',
-  thumbsize: 'big',
+  thumbsize: window.innerWidth < 768 ? 'medium' : 'big',
   gay: '0',
   lq: '0',
   totalPages: 1,
@@ -703,5 +703,6 @@ panicOverlay.addEventListener('click', () => {
 });
 
 // Init
+thumbsizeSelect.value = state.thumbsize;
 buildFiltersUI();
 router();
